@@ -152,6 +152,28 @@ ffmpeg -i mix.wav -af loudnorm=I=-16:TP=-1.5:LRA=8:measured_I=…:measured_TP=�
 - **Re-measure true peak after AAC encoding** — encoding creates new peaks the WAV measurement never saw.
 - Check the ends: nothing slams at the head, the tail is not chopped mid-decay, music and picture are the same length.
 
+### Loudness is a discriminator, not only a target
+
+Integrated loudness is the cheapest available proof of **which master you actually rendered**.
+The bands are far enough apart to be unambiguous:
+
+| what went in | measured |
+|---|---|
+| voice master (voice + ducked bed + SFX) | −16 to −20 LUFS |
+| guide master (bed + SFX only) | −23 to −25 LUFS |
+
+A ~6 LU gap that nothing else reports. A voice master measuring −24 LUFS did not get quiet —
+it is the **wrong file**, and the render is otherwise perfect. Measure every render, and
+compare against the band for the cut you believe you made:
+
+```bash
+ffmpeg -hide_banner -nostats -i renders/episode.mp4 -af ebur128=peak=true -f null /dev/null \
+  2>&1 | grep -E "^    I:|Peak:"
+```
+
+`scripts/verify_render.sh` wraps this: duration, resolution, frame count, and the loudness
+band for the expected cut, in one command.
+
 ## When you cannot listen
 
 If the environment cannot audition audio, say so — and check structure with evidence instead of claiming a pass:
@@ -171,4 +193,42 @@ When the user has not recorded yet — the common case for a script-driven serie
 
 The two differ only in which WAV the `<audio>` element points at, and **the timeline does not change between them**. That is worth telling the user out loud: they can start recording against the guide master while nothing is still being re-rendered, and a later copy revision will not move a single cue.
 
-Mechanically, there is no `--audio` flag on `hyperframes render`. The composition references a fixed path (e.g. `assets/bed.wav`); to produce the second master, swap that file in place, render, and swap it back. Keep the two masters under distinct filenames — overwriting one with the other is how a guide track gets published by accident.
+### Make the track a build parameter — never swap the file in place
+
+There is no `--audio` flag on `hyperframes render`; the composition names a path. The
+tempting workaround is to copy the other master over that path, render, and swap back.
+**Do not.** It works until the round where you forget, and the failure is silent and total:
+
+```
+build_html.mjs:  <audio id="master" src="assets/master_bgm.wav" ...>
+                                        ^^^^^^^^^^^^^ hardcoded
+```
+
+A three-and-a-half-minute render came out with the bed and no voice at all. Not a click out
+of place, not a wrong level — the entire narration missing. Nothing in the render log, the
+static audit, the overlap checks, or the duration check said anything, because **every one
+of them is blind to which audio file was used.** The only thing that caught it was
+integrated loudness measuring −24.6 LUFS where the voice master measures −17 to −19.
+
+**Parameterise it instead**, so the choice is visible in the command that ran:
+
+```js
+const MASTER = process.argv[2] === 'bgm' ? 'master_bgm.wav' : 'master_voice.wav';
+// …
+`<audio id="master" src="assets/${MASTER}" …>`
+```
+
+```bash
+node build_html.mjs                 # voice master (default)
+node build_html.mjs bgm             # guide master
+```
+
+Print the resolved filename in the generator's own output line, so the build log names the
+track it used:
+
+```
+index.html 已生成 · 总长 113.8s · 元素 95 · 动画 229 条 · 母带 master_voice.wav
+```
+
+**Rule.** *State that is a build-time choice belongs in the build, not in the filesystem.*
+A path hardcoded in a template is a choice you cannot see, cannot vary, and cannot assert on.

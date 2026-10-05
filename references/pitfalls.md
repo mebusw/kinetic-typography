@@ -325,6 +325,73 @@ green, and you will not notice the day it stops catching the real thing. This on
 wrong about the magnitude and right that something was there: 14px under a 104px headline
 is a spacing bug whatever the measurement said.
 
+## The render with no voice in it
+
+**Symptom.** A full-length render — 2m23s, 40MB, every static check green, every overlap
+check green, duration matching the timeline to the frame. And the person in the circular
+avatar is moving their mouth with nothing coming out.
+
+**Cause.** The composition names one fixed audio path:
+
+```html
+<audio id="master" src="assets/master_bgm.wav" data-start="0" …>
+```
+
+The project also produces a voice master. The workflow was: copy the voice master over
+`master_bgm.wav`, render, copy the bed back. One round, the copy-back did not happen, and
+the next render shipped the bed alone.
+
+**Why nothing caught it.** Duration, resolution, frame count, the static audit, the four
+overlap checks, and the mouth-vs-envelope check are all **blind to which file the `<audio>`
+element points at.** The picture was perfect. The narration was missing. Every one of those
+checks returned pass on a film with no voice in it.
+
+**Fix, prevention.** Make the track a build parameter so the choice is in the command that
+ran, and print the resolved name in the build log:
+
+```js
+const MASTER = process.argv[2] === 'bgm' ? 'master_bgm.wav' : 'master_voice.wav';
+// index.html 已生成 · 总长 113.8s · 母带 master_voice.wav
+```
+
+**Fix, detection.** Integrated loudness separates the two masters by ~6 LU and costs one
+command:
+
+| rendered | LUFS |
+|---|---|
+| voice master | −16 … −20 |
+| bed-only master | −23 … −25 |
+
+`scripts/verify_render.sh <file> voice` turns that into a gate. It has been run against the
+actual incident file and reports `FAIL … 响度 -24.6 LUFS 不在 'voice' 母带区间` while every
+other number on that line reads normal.
+
+**Rule.** *When a render can differ by a file, not just by numbers, one of your checks has
+to interrogate the file.* Ask what two finished films could differ in, and find the signal
+that tells them apart. Duration cannot; loudness can.
+
+## "Duration matches, so the render is fine"
+
+**Symptom.** The natural next thought after a verification gap, and it is a bad one. Three
+concrete failures this project shipped or nearly shipped that matched duration exactly:
+
+- bed-only master in a voice cut (above),
+- half the screen-recording cards firing at 0.8s instead of 68s — the runtime is unchanged,
+  the *content* is wrong,
+- a `note` sitting on top of a list item at 1:09.
+
+None of them touches the duration.
+
+**Fix.** The minimum bar is four numbers, not one:
+
+```bash
+scripts/verify_render.sh renders/episode.mp4 voice --expect-total 113.3
+```
+
+duration · resolution · frame count · **integrated loudness band**. And separately, the two
+content gates that duration cannot stand in for: `assert_timeline.py` for *when* things
+appear, `check_occlusion.mjs` for *where* they sit.
+
 ## The expensive way to learn the same things
 
 Recorded honestly, because the cost is the point:

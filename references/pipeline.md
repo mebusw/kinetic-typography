@@ -170,9 +170,27 @@ npx hyperframes render --quality looks --output renders/episode.mp4
 
 **If it stalls, it is suspended, not slow.** `ps -o pid,stat,%cpu,command` shows `T` (stopped), ~0% CPU, and no Chrome child process. `kill -CONT <pid>` resumes it. Confirming this in ten seconds is much cheaper than re-running and waiting.
 
-Verify the output: file exists, non-empty, and `ffprobe` duration matches the timeline total.
+Verify the output. `file exists, non-empty, duration matches` is the **minimum**, and it is
+not sufficient — a render with the wrong audio master, or the wrong segment's cards, passes
+all three:
 
-**Render once, deliver twice.** The reference voiceover is a timing instrument, so the master that ships carries the bed and accents only, and a second cut carries the guide voice for whoever records next. Produce both from the same render — mux, do not re-render:
+```bash
+scripts/verify_render.sh renders/episode.mp4 voice     # duration | res | frames | LUFS band
+```
+
+The loudness line is the one that earns its place. It is the only signal that distinguishes
+*which master you rendered*, and it is what caught a full-length film that shipped with the
+bed and no narration at all — a failure the static audit, the overlap checks, and the
+duration check all passed. See `audio.md` → *Loudness is a discriminator*.
+
+**Render once, deliver twice** — *only while the voice is still synthesized.* The guide
+master and the clean master share a timeline, so the second one is a mux, not a re-render:
+
+> ⚠️ This does not survive the move to a real recording. Once the actual face and the actual
+> voice are in the composition, the two cuts collapse into one: you cannot put a different
+> voice under a picture of the person who was speaking. `SKILL.md` → *Version the
+> deliverables* carries the exception. Do not leave the two-cut instruction in a project
+> that has already crossed over.
 
 ```bash
 # the clean master already has its audio; the guide cut swaps in the reference VO
