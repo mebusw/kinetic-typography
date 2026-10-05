@@ -242,6 +242,89 @@ remove (d − TARGET) seconds   →   cut = (silence_start + PAD, silence_end �
 result within 5% of the raw length means the gate did not run, regardless of how many
 entries it wrote.
 
+## The check that cannot fail
+
+**Symptom.** Three overlap checks report green for two rounds. Then a reviewer points at
+1:09 where a chip is sitting on top of a note — and re-running the checker on a composition
+rebuilt with the bug still in it says **"无遮挡：60 个采样时刻，三项检查全部干净"**.
+
+**Cause.** The three pairs were text/face-cam, face-cam/cards, text/cards. Every one is
+*cross*-category. A note on top of a list item is text/text and touches neither the
+face-cam nor a card, so no subset of the three can ever see it. The checker was not
+broken; it was complete for the failures it was written against.
+
+**Why it survived so long.** Every one of the three had fired at least once on a real bug
+during this project, so each one had a receipt and looked trustworthy. Coverage-by-
+regression is not coverage.
+
+**Fix.** Enumerate the categories, not the instances:
+
+| | face-cam | card | text |
+|---|---|---|---|
+| **face-cam** | — | check 2 | check 1 |
+| **card** | | — | check 3 |
+| **text** | | | **check 4** |
+
+One missing cell in a 3×3 grid, and the three that existed gave no hint it was missing.
+`scripts/check_occlusion.mjs` now runs all four.
+
+**Rule.** *A checker is a claim about the space, not a pile of bug reports.* Ask "what
+classes of failure could this possibly miss?" and answer with a grid, then prove each
+detector by injecting its failure:
+
+```python
+tl['content']['P11']['quote']['top'] = 1560      # text / face-cam
+tl['content']['P6']['cards'][0]['top']  = 1200    # face-cam / card
+tl['content']['P2']['note']['top']      = 1000    # text / card
+tl['content']['P7']['note']['top']      = 1300    # text / text
+```
+
+## The derived number that is wrong in a way a typed number cannot be
+
+**Symptom.** Every element's time is computed from the transcript instead of typed. A chip
+appears a beat before its segment starts, in the previous segment's layout, and the
+segment still has all of its content. Nothing errors.
+
+**Cause.** A `lead` offset used to place a second element relative to a phrase that sits
+early in its segment. `phrase_time − lead` went negative relative to the segment. This is
+the *reward* for removing 38 hand-typed numbers — and it is strictly harder to see, because
+a computed `-0.46` looks like a real answer from a real script, while a typed `0.8` that
+should have been `70.8` is obviously wrong in a diff.
+
+**Fix.** Assert in the same script that derives:
+
+```python
+rel = round(cd['t'] - c['start'], 3)
+assert 0 <= rel <= c['dur'], f"{cd['id']} 相对时间 {rel} 越出段 [{c['start']}, {c['end']}]"
+```
+
+**Rule.** *Every hand-typed magic number you remove must be replaced by an assertion, not
+just by a formula.* Derivation moves your errors somewhere quieter; it does not remove
+them. And keep `lead` scoped to the phrase — if it has to be large enough to cross a
+segment boundary, the anchor is wrong.
+
+## The false positive that gets answered with a bigger threshold
+
+**Symptom.** A newly added overlap check reports a 42px collision on a composition that has
+already shipped. The frame shows ~14px of clearance.
+
+**Cause.** `Range.getBoundingClientRect()` returns *line boxes*. Every line of a multi-line
+element carries `(line-height − font-size) / 2` of half-leading that no glyph reaches, and a
+two-line headline has one above and one below.
+
+**Fix.** Subtract it before comparing:
+
+```js
+const lh = cs.lineHeight === 'normal' ? fs * 1.2 : (parseFloat(cs.lineHeight) || fs);
+const halfLead = Math.max(0, (lh - fs) / 2);
+```
+
+**Rule.** *When a check fires on something you believe is fine, the first move is to look at
+the pixels — not to raise the threshold.* Raising it is how a check becomes permanently
+green, and you will not notice the day it stops catching the real thing. This one was both
+wrong about the magnitude and right that something was there: 14px under a 104px headline
+is a spacing bug whatever the measurement said.
+
 ## The expensive way to learn the same things
 
 Recorded honestly, because the cost is the point:

@@ -144,6 +144,35 @@ you re-run one script instead of re-reading forty numbers.
 feels reactive; 0.2–0.5s early feels like the deck is anticipating the speaker. Both are
 defensible — pick one and apply it everywhere, because mixed values read as sloppiness.
 
+### Deriving the times replaces one class of error with a quieter one
+
+Replacing 38 hand-entered offsets with computed ones is strictly better, and it failed
+anyway — one line in, because `lead=1.9` subtracted from a phrase that sat 1.44s into its
+segment pushed the element to **-0.46s, before the segment existed**:
+
+```
+更干净    rel  1.44  abs 92.78
+更专业    rel -0.46  abs 90.88     ← 段首是 91.34
+```
+
+Nobody typing 38 numbers gets this wrong, and nobody eyeballing a contact sheet sees it
+either, because the element still appears — a beat early, in the previous segment, where
+the layout it belongs to does not exist yet.
+
+**Arithmetic errors are quieter than transcription errors.** A typed `0.8` that should have
+been `70.8` is obviously wrong in a diff. A computed `-0.46` looks like a real answer
+produced by a real script. **The more of the timeline you derive, the more the assertion
+gate — not review — becomes the only thing between you and a plausible wrong video.**
+
+Two habits that fall out of this:
+
+- **Clamp `lead` to the phrase, not the segment.** A `lead` positions an element *within*
+  the phrase it belongs to. If it has to be large enough to cross a segment boundary, the
+  anchor is wrong, not the lead.
+- **Assert the derived value in the same script that derives it.** `assert_timeline.py`
+  caught this on its first run, against a timeline that was otherwise correct. A derivation
+  script that writes without asserting has only moved the typo somewhere quieter.
+
 ---
 
 ## 5. Cards live in absolute time; everything else is relative

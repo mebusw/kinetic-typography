@@ -91,10 +91,10 @@ still visible.
 
 ---
 
-## Three overlap checks, not one
+## Four overlap checks, not three — and prove the fourth
 
-There are three distinct collisions, and a single "does the face-cam cover anything" check
-catches only the first. Run all three over a dense sample of timestamps (5 per segment is
+There are **four** distinct collisions. A single "does the face-cam cover anything" check
+catches one of them. Run all four over a dense sample of timestamps (5 per segment is
 enough, 60 points for a 2-minute piece) in **one** `page.evaluate` per run — a CDP round
 trip per seek is what makes a probe time out on a long composition.
 
@@ -103,6 +103,52 @@ trip per seek is what makes a probe time out on a long composition.
 | text vs face-cam | unreadable copy |
 | face-cam vs cards | the demo is hidden |
 | text vs cards | both are unreadable; the card is evidence and must stay legible |
+| **text vs text** | a note lands on the same line as a list item |
+
+`scripts/check_occlusion.mjs` runs all four.
+
+**Why the fourth is not an edge case.** A segment has a headline, a sub, a list and a note
+— four elements in one column, and any two of them can land on each other. The first three
+checks are all *cross*-category: each pairs a text element with either the face-cam or a
+card. A note on top of the last list item involves neither, so **no subset of the first
+three can ever see it.** In review, that collision was reported by a person while the
+three-check harness had been reporting green — and once the fourth check existed it
+immediately found a second one (a headline sitting 14px off the first chip) that the same
+harness had also called clean.
+
+**The lesson is not "add a check." It is that a green check is a claim you have to earn.**
+A checker that has only ever run against a correct composition is an untested assertion.
+
+**Prove each detector before trusting it.** Inject one fault of each type into a throwaway
+timeline and confirm all four go red:
+
+```python
+tl['content']['P11']['quote']['top'] = 1560      # text / face-cam
+tl['content']['P6']['cards'][0]['top']  = 1200    # face-cam / card
+tl['content']['P2']['note']['top']      = 1000    # text / card
+tl['content']['P7']['note']['top']      = 1300    # text / text
+```
+
+### Calibrate the text/text check against line boxes, not ink
+
+The first run of the fourth check reported a 42px overlap between a two-line 104px headline
+and the chip below it. Opening the frame showed ~14px of actual clearance. The extra 28px
+was **half-leading**: `Range.getBoundingClientRect()` returns *line boxes*, and every line
+of a multi-line element carries `(line-height − font-size) / 2` of space no glyph ink
+reaches.
+
+```js
+const cs = getComputedStyle(el);
+const fs = parseFloat(cs.fontSize) || 0;
+const lh = cs.lineHeight === 'normal' ? fs * 1.2 : (parseFloat(cs.lineHeight) || fs);
+const halfLead = Math.max(0, (lh - fs) / 2);
+b = { ...b, top: b.top + halfLead, bottom: b.bottom - halfLead };
+```
+
+**Do not answer a false positive by loosening the threshold.** 42px → threshold 45px is how
+a check becomes permanently green. Fix the measurement, then look at the pixels: the
+number was wrong about *how much* and right that *something* was there — 14px of clearance
+on a 104px headline is a spacing problem whatever the number said.
 
 Measure text with a `Range`, not the element box. List items and notes are full-width
 divs, so their boxes are 900px wide while the glyphs occupy 300px — box-based checking
