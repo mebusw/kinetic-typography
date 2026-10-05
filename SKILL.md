@@ -1,6 +1,6 @@
 ---
 name: kinetic-typography
-description: Produce vertical (9:16) kinetic-typography shorts — text-led explainers, opinion clips, and scripted shorts — from a copy deck or script, including when the voiceover has not been recorded yet. Use when asked to "make a kinetic typography video", "动效文字视频", "竖屏文字短视频", "字幕动效视频", or to turn a 策划稿/口播稿/文案 into a timed, captioned, music-backed vertical video with a reserved slot for a talking-head overlay. Covers reference-voiceover timing, the timeline.json → composition pipeline, safe zones, per-segment snapshot QA, audio leveling and SFX cue alignment, and the silent-failure traps specific to this format. Not for landscape/16:9 promo films, slide decks, or plain subtitled video with no designed motion.
+description: Produce vertical (9:16) kinetic-typography shorts — text-led explainers, opinion clips, and scripted shorts — from a copy deck or script, including when the voiceover has not been recorded yet. Use when asked to "make a kinetic typography video", "动效文字视频", "竖屏文字短视频", "字幕动效视频", or to turn a 策划稿/口播稿/文案 into a timed, captioned, music-backed vertical video with a reserved slot for a talking-head overlay. Covers reference-voiceover timing, retiming onto a real recorded voiceover (transcribe → tighten → re-derive), the timeline.json → composition pipeline, safe zones, talking-head slot layout and occlusion checks, per-segment snapshot QA, audio leveling, SFX cue alignment, synthesizing a BGM/SFX bed with numpy, and the silent-failure traps specific to this format. Not for landscape/16:9 promo films, slide decks, or plain subtitled video with no designed motion.
 ---
 
 # Kinetic Typography (vertical)
@@ -17,6 +17,15 @@ A copy deck's word count implies a duration; that number is wrong, often by 20%.
 
 Full stage detail: [references/pipeline.md](references/pipeline.md).
 
+**That paragraph is about a synthesized reference VO, which is a stopwatch. The moment a real
+recording exists it stops being a stopwatch and becomes the score** — and the whole timing
+basis has to be re-derived, not rescaled. Transcribe the take, tighten its pauses *before*
+timing anything, cut any false starts the speaker owns up to, then compute every element's
+time from the transcript. Budget 20–25% of the raw take for tightening; a cut that came back
+within 5% of the raw length means the gate did not run. Full procedure, including the
+re-transcribe-after-every-cut rule and the phrase-anchoring pattern:
+[references/real-voiceover.md](references/real-voiceover.md).
+
 ## Default pipeline
 
 Each stage is a gate. Do not enter stage *n+1* until stage *n* passes.
@@ -26,7 +35,7 @@ Each stage is a gate. Do not enter stage *n+1* until stage *n* passes.
 | 0 | **Direction** — one page: the narrative shape, the 母题, the devices derived from it, and an explicit *this episode will not* list | The motif is derived from this deck's content, not borrowed from the last episode; a series episode differs from its predecessor on ≥3 direction axes |
 | 1 | **Split** the copy deck into 8–14 segments; each is one idea | Each segment's text fits one screen's worth of type |
 | 2 | **Reference VO** — synthesize per segment, `ffprobe` real durations | Measured total vs deck estimate reported to the user |
-| 3 | **Timeline** — write `timeline.json` (content + measured times); run the pre-flight validator | `validate_timeline.py` passes |
+| 3 | **Timeline** — write `timeline.json` (content + measured times); run the pre-flight validator | `validate_timeline.py` **and `assert_timeline.py`** pass |
 | 4 | **Generate** the composition from the JSON; run the static audit | `audit_html.mjs` reports no missing ids and no timing hazards |
 | 5 | **User review** — hand over the generated 打点表 (timing sheet) and storyboard | User has corrected the copy and beat times |
 | 6 | **Snapshot QA** — one frame per segment, sampled late in the segment | Every frame inspected; layout errors fixed here |
@@ -68,12 +77,13 @@ The judgement call is data versus words: delete the fabricated figure, keep the 
 ## Layout constraints that are not negotiable either
 
 - **9:16, and the safe zone is not the frame.** Platform UI eats the top ~120px and the bottom ~300px. Text never enters those bands. The validator enforces this; see `meta.safe` in the timeline schema.
-- **Reserve the talking-head slot.** If the user will record a face-cam later, carve it out **from the start**: short side ≈ ¼ of the frame's short side, anchored bottom-left or bottom-right, and keep the layout clear of it. If no footage exists yet, leave the slot empty — never shrink the type to fill it, and never move the composition to make room later.
+- **Reserve the talking-head slot.** If the user will record a face-cam later, carve it out **from the start**: short side ≈ ¼ of the frame's short side, anchored bottom-left or bottom-right, and keep the layout clear of it. If no footage exists yet, leave the slot empty — never shrink the type to fill it, and never move the composition to make room later. When the footage does arrive: **crop a square around the head before masking, mask with CSS `border-radius` and never with an alpha-encoded video** (a libvpx build without WebM alpha drops the plane silently and you get an opaque square), and give every screen-recording card a hard bottom edge above the slot. Three separate overlap checks are needed — text vs face-cam, face-cam vs cards, text vs cards — and text must be measured with a `Range`, not its full-width element box, or the check produces nothing but false positives. Layout table, crop probe, and the three-check harness: [references/facecam-layout.md](references/facecam-layout.md).
 - **Abstract claims need a visible action.** "Viewers understand relationships, you gave them a list" has no picture. What works: three grey blocks in a row (the list) → connector lines drawn on in one stroke → reassembled into a tree. The audience verifies the claim with their own eyes instead of taking your word for it.
 - **One motif per episode, derived from the product's *action*, not from its palette.** Before designing, write down what the previous episodes already used: motif, spine organ **and its orientation**, accent colour. A new episode that reuses the same organ in a different shape still reads as the same episode — differ in kind, not in appearance, because a right-hand vertical rail and a top horizontal rail are two different devices even though both are "a rail". Then derive the new motif from what the product actually *does* this episode, which is an action, not a look.
 - **A persistent device is designed as a mapping before it is coded.** Write its per-segment state down as data — a small table of "segment → what lights up, where the playhead sits" — and generate the animation from that table. A spine whose states were improvised while writing animation code drifts out of the argument by the third segment.
 - **Two beats in one segment need per-element durations, not a segment-wide exit.** When a long segment runs two judgements in the same layout rows, the first beat's elements must carry their own `dur` that ends before the second beat lands. Left on the segment's exit, both beats are declared on-screen at once and the overlap report is *correct* even though the picture looks fine.
 - **Derive card height from the asset, never from memory.** Probe each cut once and store its `width,height`; compute the box from the real aspect ratio. Hand-typed heights are how a 16:9 still ends up stretched and a portrait clip ends up letterboxed into a bar.
+- **A card's `t` and `out` are absolute time; a card's *authored* value is relative.** Cards are written into the segment spec as段内相对时间 and made absolute in one place — the expansion loop. When that conversion is missing for a segment that starts at 70s, its card fires at **0.8s**, during the title; the film still renders and still looks plausible in a contact sheet, because the first segment does have cards. Assert it: `0 <= cd['t'] - c['start'] <= c['dur']` for every card. This catches the whole family of relative/absolute slips, including an un-absolutised `out` landing *before* its own `t` so the card never appears at all.
 - **Vertical means the type must be huge.** Assume a phone at arm's length. Body text below ~28px at 1080-wide is unreadable in-feed; if it will not survive that, cut the words.
 
 Motion vocabulary, type scale, rhythm, and emphasis rules: [references/motion-and-layout.md](references/motion-and-layout.md).
@@ -85,6 +95,7 @@ Full procedure: [references/audio.md](references/audio.md). The three rules that
 - **Level by RMS against a target offset, never by peak normalization.** Peak-normalized music can measure louder than the voice. Target the bed ~20–25 dB below the voice's RMS, then listen.
 - **Duck the music only.** A sidechain keyed to the voice must not touch sound effects — compress the SFX and the click/whoosh accents disappear.
 - **Align every accent by its measured onset or peak.** Clicks align at the onset, whooshes at the peak and start *before* the picture; a cue dropped at the action's timestamp lands 30–80ms late and the whole film reads loose. `scripts/sfx_landmarks.py` prints the numbers, and the same measurement sets each cue's gain.
+- **A synthesized bed is wrong in a way that produces no error.** Loudness checks all pass and the mix still feels uneasy, because the problem is *where the energy is*, not how loud it is. Three measurements catch it before a human does: spectral balance (**>55% of energy below 150Hz is the uncanny band** — target ~35% sub / 55% low-mid and leave 1.2k–8k deliberately empty for the voice), crest factor (**12–18dB healthy; under 9dB means the saturator crushed everything to one loudness**), and a zero clip count. Synthesizing the bed, writing `impact`/`pluck`/`bell` that do not sound like a knock and a beep, and lifting a proven synth's core while rewriting its arrangement: [references/bgm-and-sfx.md](references/bgm-and-sfx.md).
 
 ## Scripts
 
@@ -95,6 +106,8 @@ Full procedure: [references/audio.md](references/audio.md). The three rules that
 | `scripts/measure_segments.py` | ffprobe a directory of per-segment voiceover files into measured durations + a laid-out timeline skeleton, and compare the measured total against the deck's own estimate |
 | `scripts/validate_timeline.py` | Pre-flight assertions on `timeline.json`; with `--html` also catches ids the generator never emitted; `--out` writes the 打点表 timing sheet |
 | `scripts/audit_html.mjs` | Static audit of the generated composition: unresolved selectors, duplicate ids, stranded-fade hazards, `NaN` times, unitless CSS values, layout-property animation, idless or transformed `<video>` |
+| `scripts/assert_timeline.py` | Timeline assertions: every card inside its own segment (catches the relative→absolute slip), `out` after `t`, finite times, sfx inside the runtime. Run this **before** the static audit — it catches the one bug no other check sees |
+| `scripts/check_occlusion.mjs` | Three overlap checks — text vs face-cam, face-cam vs cards, text vs cards — over a list of sample times. Text measured with a `Range`, whole sweep in one `evaluate`. Set `PUPPETEER_CORE` if `puppeteer-core` is not resolvable |
 | `scripts/contrast.py` | WCAG ratio for candidate text colors against the real composited background, with alpha blending and passing-variant suggestions |
 | `scripts/level_audio.py` | RMS-target the music bed, apply voice-keyed ducking and fades, and print the numbers it used |
 | `scripts/sfx_landmarks.py` | Measure each accent file's onset, peak time and peak level — the numbers that align a cue to its action and set its gain |
@@ -109,7 +122,7 @@ Single-episode rules assume one film's worth of footage. A series adds three con
 - **Footage can belong to exactly one episode.** If only one script in the series says the product name out loud, only that episode may show the screen recording where the name is legible. The others look like they have the same footage and quietly break the naming convention the scripts depend on.
 - **Shared long recordings get a different range per episode.** A 60-second scroll through a gallery, used whole twice, is the same shot twice. Take a different interval and freeze on a different page each time.
 - **Divergent motifs are not decoration.** Adjacent episodes sharing a palette read as one long film; the motif rule under Layout constraints governs the choice, and the stage-0 "this episode will not" list is what keeps it honest once the deadline is near. The master table's columns are the axes — differ in at least three of them between adjacent episodes, in kind and not just in appearance.
-- **Version the deliverables, and keep the two cuts apart.** `01 格式返工型-归位-v1-纯配乐版` and `…-参考口播版` is a naming scheme that survives being passed around in a chat message three weeks later. The number in the name is what lets the next episode say "same direction, v2" instead of "the one we changed".
+- **Version the deliverables, and keep the two cuts apart.** `01 格式返工型-归位-v1-纯配乐版` and `…-参考口播版` is a naming scheme that survives being passed around in a chat message three weeks later. The number in the name is what lets the next episode say "same direction, v2" instead of "the one we changed". **The exception is a real voiceover:** once the actual face and voice are baked in, the reference-VO cut cannot exist — you cannot swap the audio without swapping the picture, because the picture *is* the person speaking. Ship one file, and do not leave a `…-参考口播版` sitting next to a real-voice episode where someone can publish the wrong one.
 
 ## Where to put the project
 

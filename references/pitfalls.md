@@ -118,6 +118,130 @@ This has diagnosed both the sibling-positioning bug and the stacked-headers bug 
 
 **Several cached puppeteer copies are not interchangeable.** A copy paired with a mismatched Chromium can pass a trivial evaluate and then kill the renderer the instant request interception aborts a `file://` media request. Selecting the newest one by mtime is a coin flip. Validate the candidate, or pin the one you measured.
 
+## The card that plays at 0.8s
+
+**Symptom.** Half the film's screen recordings are missing and the first segment's card is
+showing something it shouldn't. The render succeeds, the contact sheet looks plausible —
+because the *first* segment does have cards, so the frame at the top of the sheet is fine.
+
+**Cause.** Cards are authored as段内相对时间 inside the segment spec and made absolute in
+the expansion loop. A refactor that introduces a `card()` helper returns the authored
+values and the expansion loop copies them through unchanged. A card in a segment that
+starts at 70.5s now fires at its relative 0.8s — during the title card.
+
+**Why it survives review.** It is not a total failure. The first ~10 seconds look right, the
+duration is right, the audio is in sync, and a reviewer scrubbing the middle finds "no
+card" which reads as a deliberate sparse layout.
+
+**Fix.** One assertion, in the generator, before it writes anything:
+
+```python
+for sid, c in out['content'].items():
+    for cd in c.get('cards', []):
+        assert 0 <= round(cd['t'] - c['start'], 3) <= round(c['dur'], 3), \
+            f"{cd['id']} 不在 {sid} 段内（t={cd['t']} 段起={c['start']}）"
+        if cd.get('out') is not None:
+            assert cd['out'] >= cd['t'], f"{cd['id']} 的 out 早于 t —— 卡片永不出现"
+```
+
+**Rule.** *The relative→absolute conversion is the highest-value assertion in this skill.*
+It is the one transformation whose failure is invisible in every other check, and the
+`out`-before-`t` variant produces an element that silently never appears at all.
+
+## The mix that passes every loudness check and still feels wrong
+
+**Symptom.** "The music is 诡异 / weird / unsettling." Every measurement is in range: the
+bed is 20dB under the voice, nothing clips, the sidechain works, the cue alignments are
+right. Played back, it is genuinely unpleasant.
+
+**Cause.** Loudness is not the only axis. The failure is *spectral placement*: a bed with
+70%+ of its energy below 150Hz is a low drone under everything, and the ear reads that as
+unease even at −29dB. It is not too loud, it is too low.
+
+**Fix.** Measure the distribution before showing a render:
+
+```
+20-150      36%      ← target 30–40; above 55% is the uncanny band
+150-400     59%
+400-1.2k     8%
+1.2-3k      0.1%    ← deliberately empty: this is where the voice lives
+3-8k        0%
+```
+
+Two more numbers travel with it: **crest factor** (`peak − RMS`, target 12–18dB; under 9dB
+means the saturator has crushed every peak to the same loudness and the mix will feel flat
+and lifeless) and **clip count** (must be 0).
+
+**Compounding case.** Raising the bed because it "sits too far back" pushes the saturator
+into compression and eats exactly the dynamics the user asked for. Re-check the crest
+factor after every gain change, not just the loudness.
+
+## The face-cam that hides the thing it is supposed to accompany
+
+**Symptom.** "The avatar is covering the screen recording." The face-cam is in the right
+place by the spec — short side ≈ ¼, bottom-right — and it still covers the demo.
+
+**Causes, in order:**
+
+1. **The card was sized before the slot moved.** The layout table was written for one
+   face-cam position and the slot was later pushed down to free the middle for bigger
+   cards. Cards keep their old bottom edge and now cross the new slot boundary. This
+   happens every time either number changes.
+2. **Height typed instead of derived.** A card's `h` came from a remembered number rather
+   than `w / measured_aspect`, so it is taller than intended by 40px and crosses the line.
+3. **The slot is reserved but not enforced.** "Keep the layout clear of it" was a note in
+   the direction doc, never turned into a check.
+
+**Fix.** A single hard number that both sides agree on, plus one automated check per
+collision type. On 1080×1920 with a 300px circle at bottom-right: slot occupies y
+1512–1812, cards get a hard bottom edge at 1460, progress bar moves to the very bottom
+edge (ticks 1876 / bar 1894) — moving the persistent chrome out is what buys the room the
+bigger cards need.
+
+**Rule.** *A reserved slot is a coordinate, not an intention.* Three separate checks —
+text vs slot, slot vs cards, text vs cards — and text measured with a `Range` so the
+full-width element boxes stop drowning the report in false positives. One check catches one
+of the three failures and leaves the other two invisible.
+
+## The click that got louder the moment you de-clicked it
+
+**Symptom.** SFX were rebuilt to stop competing with the voice, and now a single 85ms tick
+measures a 3.1kHz spectral centroid — up from 520Hz. It sits exactly where you were trying
+to keep the mix empty.
+
+**Cause.** A few milliseconds of broadband noise added to the attack. White noise carries
+most of its energy above 3kHz, and on an 85ms sound the attack *is* the spectrum — a 3ms
+noise burst dominates the centroid even at low level.
+
+**Fix.** Keep the air, lose the bandwidth: put the noise in the first 6–8ms, ramp it to
+zero, and lowpass the result. Better still, make the tick tonal — a `pluck` (fundamental
+plus 2nd/3rd/5th harmonics) reads as a physical object landing where a sine pip reads as a
+computer beep.
+
+**Rule.** *Spectral centroid is a design constraint for short SFX, not a diagnostic.* Any
+sound under ~200ms needs a centroid target stated up front, because its spectrum is
+whatever its attack is.
+
+## A cut that barely cut anything
+
+**Symptom.** The tightened voiceover came back at 96% of the raw length, and the dead air
+is still there. The gate reported success.
+
+**Cause.** The silent-centring formula. `cut = (a + (d−TARGET)/2, b − (d−TARGET)/2)` has
+length `TARGET`, so it removes 0.40s from *every* long gap regardless of how long that gap
+was — a 2.75s pause becomes 2.35s and still reads as a pause. The cut list is correct; the
+arithmetic subtracted the wrong quantity.
+
+**Fix.** Trim the boundary, do not centre it:
+
+```
+remove (d − TARGET) seconds   →   cut = (silence_start + PAD, silence_end − (TARGET − PAD))
+```
+
+**Rule.** *Assert the recovery rate, not the cut count.* Budget 20–25% of the raw take; a
+result within 5% of the raw length means the gate did not run, regardless of how many
+entries it wrote.
+
 ## The expensive way to learn the same things
 
 Recorded honestly, because the cost is the point:
