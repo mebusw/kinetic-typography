@@ -1,6 +1,6 @@
 # The pipeline, stage by stage
 
-Contents: [Layout](#episode-layout) · [Stage 1 split](#stage-1--split-the-deck) · [Stage 2 reference VO](#stage-2--reference-voiceover) · [Stage 3 timeline](#stage-3--timelinejson) · [Stage 4 generate](#stage-4--generate-the-composition) · [Stage 5 review](#stage-5--user-review) · [Stage 6 snapshot QA](#stage-6--snapshot-qa) · [Stage 7 render](#stage-7--render) · [Schema](#timelinejson-schema)
+Contents: [Layout](#episode-layout) · [Stage 0 direction](#stage-0--direction) · [Stage 1 split](#stage-1--split-the-deck) · [Stage 2 reference VO](#stage-2--reference-voiceover) · [Stage 3 timeline](#stage-3--timelinejson) · [Stage 4 generate](#stage-4--generate-the-composition) · [Stage 5 review](#stage-5--user-review) · [Stage 6 snapshot QA](#stage-6--snapshot-qa) · [Stage 7 render](#stage-7--render) · [Schema](#timelinejson-schema)
 
 ## Episode layout
 
@@ -10,6 +10,7 @@ Contents: [Layout](#episode-layout) · [Stage 1 split](#stage-1--split-the-deck)
   script/seg-01.txt …    per-segment voiceover text (one file per segment)
   audio/vo/seg-01.*      reference voiceover, synthesized
   audio/segments.json    MEASURED durations — the input to stage 3
+  audio/cues.json        the cue list — at/file/gain/syncOffset/role per accent (the mix's source of truth)
   audio/bgm.*  audio/sfx/  audio/bed.wav
   assets/                photos, screen recordings, logos
   timeline.json          source of truth: content + timing
@@ -20,6 +21,19 @@ Contents: [Layout](#episode-layout) · [Stage 1 split](#stage-1--split-the-deck)
 ```
 
 `index.html` and `打点表.md` are build products. If they disagree with reality, the bug is in `timeline.json` or `build.mjs`, not in the generated file. Hand-editing a generated file guarantees the next run silently reverts it.
+
+## Stage 0 — direction
+
+One page, written before any segment exists. It carries three decisions the rest of the pipeline depends on:
+
+1. **The narrative shape** — chosen *before* splitting, because the split follows it. Not every deck is an argument in sequence:
+   - problem → turn → resolution (a deck that solves one pain)
+   - before → after (a rework or performance story)
+   - countdown (many small parallel points)
+   - one task told end to end (a workflow)
+   - straight argument (the default — earn it, don't just fall into it)
+2. **The motif and its devices**, derived from what this deck's content *does* (see the series rules in SKILL.md).
+3. **The direction axes** this episode takes. In a series, the new episode differs from the previous one on **at least three** of: background & light, type voice, motif, transition vocabulary, rhythm, sound. Changing only the palette still reads as the last episode.
 
 ## Stage 1 — split the deck
 
@@ -173,6 +187,17 @@ Name them so the difference survives being forwarded in a chat: `…-v1-纯配�
 ```bash
 ffmpeg -i renders/episode.mp4 -vf "select='eq(n\,<frame>)'" -vsync vfr qa/frame-<frame>.png
 ```
+
+**Then cut the boundaries into strips.** A frame per segment does not show transitions — and transitions only exist *between* the sampled frames:
+
+```bash
+# one 10fps strip across each segment boundary (±0.5s around the cut)
+ffmpeg -ss <boundary-0.5> -t 1 -i renders/episode.mp4 -vf "fps=10,scale=320:-1,tile=10x1" -frames:v 1 qa/cut-<n>.png
+# whole-film rhythm: a 2fps contact sheet per half
+ffmpeg -i renders/episode.mp4 -vf "fps=2,scale=384:-1,tile=6x9" -frames:v 1 qa/sheet-a.png
+```
+
+Read the strips for: grey mush mid-crossfade (see Transitions in motion-and-layout), an outgoing element stranded into the next segment, a wipe clipping a word, two consecutive boundaries using the same move. Read the sheet for rhythm — three same-shaped segments in a row is the metronome the direction page promised to avoid.
 
 ### On repeated renders
 

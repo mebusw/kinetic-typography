@@ -67,7 +67,7 @@
 
 ### 4. 单独用某个工具
 
-五个脚本 + 一个调试探针都能独立跑，全部支持 `--help`：
+六个脚本 + 一个调试探针都能独立跑，全部支持 `--help`：
 
 ```bash
 S=~/.agents/skills/kinetic-typography/scripts
@@ -90,6 +90,9 @@ python3 $S/contrast.py "#7A9086" --bg "#08120E" --suggest
 # 配 BGM：按人声 RMS 定标 + 侧链闪避
 python3 $S/level_audio.py --voice vo.wav --music bgm.wav --out bed.wav --offset -22 --duck
 
+# 量出每个音效真正被听到的位置（起音/峰值）和实际电平
+python3 $S/sfx_landmarks.py audio/sfx/*.wav
+
 # 画面不对劲时，直接去运行页面里量
 node    $S/probe_dom.mjs index.html --at 1.2,4.5,9
 ```
@@ -101,7 +104,7 @@ node    $S/probe_dom.mjs index.html --at 1.2,4.5,9
 ```
 SKILL.md          主流程与硬规则（给 AI 读）
 references/       详细手册：流程、版式与动效、音频、改稿、踩坑
-scripts/          6 个可独立运行的工具
+scripts/          7 个可独立运行的工具
 assets/           时间轴模板
 agents/           UI 显示名与默认提示词
 ```

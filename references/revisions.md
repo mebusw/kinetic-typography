@@ -12,6 +12,7 @@ A data point you delete from the timeline can still be visible somewhere you did
 | The voiceover | `script/seg-*.txt` — a spoken number survives even after the caption is gone |
 | The 打点表 | it is generated; regenerate it or it will contradict the film |
 | **Baked into a still** | open every `assets/*.png` you cut as a graphic card and *look* |
+| The cue list | `audio/cues.json` — an accent timed to a moved or deleted beat fires into the next segment; regenerate it with the timeline |
 | Baked into footage | the screen recording shows it in pixels; grep cannot find it |
 | The direction doc | the母题 paragraph usually names the number |
 
@@ -69,5 +70,7 @@ A copy revision never changes the timeline's *shape*, so a voice actor can start
 ## 5. Re-run the gates, and say what you changed
 
 Re-run `validate_timeline.py --html index.html`, `audit_html.mjs`, `hyperframes check`, then snapshot **the segments you touched plus one before and one after** — a one-line edit moves nothing else, but a re-cut can shift a card's exit.
+
+Then look at only what changed: the touched segments' snapshots, plus a 10fps strip across each boundary that borders them (see pipeline stage 7). One full contact-sheet pass comes at the end. Re-watching the whole film segment by segment after a one-line change is how a revision eats a day.
 
 Report the change as a table of before → after, and state which assets you verified visually. The user is deciding whether to trust the file; "I checked" without naming what you checked is not the same as having checked.

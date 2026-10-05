@@ -1,6 +1,6 @@
 # Motion and layout for vertical kinetic typography
 
-Contents: [Frame and safe zone](#frame-and-safe-zone) · [Type](#type) · [The face-cam slot](#the-face-cam-slot) · [Motion vocabulary](#motion-vocabulary) · [Rhythm](#rhythm) · [Emphasis](#emphasis-what-to-actually-animate) · [Making claims visible](#making-abstract-claims-visible) · [Footage](#footage) · [A persistent element can do the viewer's thinking](#a-persistent-element-can-do-the-viewers-thinking)
+Contents: [Frame and safe zone](#frame-and-safe-zone) · [Type](#type) · [The face-cam slot](#the-face-cam-slot) · [Motion vocabulary](#motion-vocabulary) · [Rhythm](#rhythm) · [Transitions](#transitions) · [Emphasis](#emphasis-what-to-actually-animate) · [Making claims visible](#making-abstract-claims-visible) · [Footage](#footage) · [A persistent element can do the viewer's thinking](#a-persistent-element-can-do-the-viewers-thinking)
 
 ## Frame and type
 
@@ -72,9 +72,29 @@ The video is a sequence of **holds with motion between them**, not continuous mo
 claim lands (motion) → 1.5–3s hold → support appears (motion) → hold → segment exits
 ```
 
+**Each segment has one protagonist and at least one state change.** The protagonist is where the argument currently lives — the claim, the diagram, the numeral. A segment where nothing changes for more than ~2.5s is only legitimate while the viewer is reading; otherwise add the change (a support arriving, the spine advancing, a slow push-in) or shorten the segment.
+
 Vary the pattern between segments or the whole thing flattens into a metronome. A segment that is nothing but a wall of text with a fade is a legitimate rest point — do not animate a segment just to animate it.
 
 Beat duration comes from the measured voiceover, never from a default. If a sentence is 1.4s of speech, its text has ~1.4s minus an entry animation. That constraint is what forces you to cut words, which is the point.
+
+## Transitions
+
+Segment boundaries are where a feed viewer decides to stay or scroll — and where a cheap film is most visibly cheap. Choose each boundary like a move, not a default fade.
+
+| Transition | Use when | Notes |
+|---|---|---|
+| Hard cut on the beat | The argument changes gear; light↔dark pairs | The cut lands on the bed's beat; blurring the outgoing protagonist a beat before the cut makes it cleaner |
+| Push-through zoom | From a claim into its evidence | The outgoing subject scales up and fades; the incoming segment starts slightly oversized and settles |
+| Match-cut continuation | The previous segment's element **is** the next segment's subject | Push in to that element; the next segment starts at the same position and size — the argument reads as continuous instead of card-shaped |
+| Masked wipe | Between parallel claims (A vs B, before vs after) | The mask shape comes from this episode's motif, not a generic rectangle |
+| White flash / black | Between acts only | 0.15–0.25s with an impact accent; more than twice per film cheapens everything after it |
+
+Rules that hold across all of them:
+
+- **Light and dark segments never long-crossfade.** The midpoint of a long crossfade is grey mush — hard cut, or blur the outgoing subject out first, then cut.
+- **The same transition three times in a row is a template.** Vary in kind between adjacent segments: trade scale (full-frame ↔ close-up ↔ wall of type) and brightness, not just the direction of the wipe.
+- A boundary should carry information — *what changed in the argument* — not just motion. A cut that communicates nothing the voiceover did not is decoration.
 
 ## Emphasis: what to actually animate
 

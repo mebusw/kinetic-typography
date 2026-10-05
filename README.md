@@ -70,7 +70,7 @@ Before it lays anything out, it hands you the **`打点表.md`** and the visual 
 
 ### 4. Use the tools on their own
 
-All six scripts run standalone and all take `--help`:
+All seven scripts run standalone and all take `--help`:
 
 ```bash
 S=~/.agents/skills/kinetic-typography/scripts
@@ -93,6 +93,9 @@ python3 $S/contrast.py "#7A9086" --bg "#08120E" --suggest
 # Music bed: RMS-matched to the voice, with ducking
 python3 $S/level_audio.py --voice vo.wav --music bgm.wav --out bed.wav --offset -22 --duck
 
+# Where each accent is actually heard (onset/peak) and how loud it really is
+python3 $S/sfx_landmarks.py audio/sfx/*.wav
+
 # When something looks wrong, measure the live page
 node    $S/probe_dom.mjs index.html --at 1.2,4.5,9
 ```
@@ -104,7 +107,7 @@ Start a new project from [`assets/timeline.template.json`](assets/timeline.templ
 ```
 SKILL.md          main pipeline and hard rules (read by the AI)
 references/       manuals: pipeline, layout & motion, audio, revisions, pitfalls
-scripts/          6 standalone tools
+scripts/          7 standalone tools
 assets/           timeline template
 agents/           UI display name and default prompt
 ```

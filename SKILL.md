@@ -1,6 +1,6 @@
 ---
 name: kinetic-typography
-description: Produce vertical (9:16) kinetic-typography shorts — text-led explainers, opinion clips, and scripted shorts — from a copy deck or script, including when the voiceover has not been recorded yet. Use when asked to "make a kinetic typography video", "动效文字视频", "竖屏文字短视频", "字幕动效视频", or to turn a 策划稿/口播稿/文案 into a timed, captioned, music-backed vertical video with a reserved slot for a talking-head overlay. Covers reference-voiceover timing, the timeline.json → composition pipeline, safe zones, per-segment snapshot QA, audio leveling, and the silent-failure traps specific to this format. Not for landscape/16:9 promo films, slide decks, or plain subtitled video with no designed motion.
+description: Produce vertical (9:16) kinetic-typography shorts — text-led explainers, opinion clips, and scripted shorts — from a copy deck or script, including when the voiceover has not been recorded yet. Use when asked to "make a kinetic typography video", "动效文字视频", "竖屏文字短视频", "字幕动效视频", or to turn a 策划稿/口播稿/文案 into a timed, captioned, music-backed vertical video with a reserved slot for a talking-head overlay. Covers reference-voiceover timing, the timeline.json → composition pipeline, safe zones, per-segment snapshot QA, audio leveling and SFX cue alignment, and the silent-failure traps specific to this format. Not for landscape/16:9 promo films, slide decks, or plain subtitled video with no designed motion.
 ---
 
 # Kinetic Typography (vertical)
@@ -23,14 +23,14 @@ Each stage is a gate. Do not enter stage *n+1* until stage *n* passes.
 
 | # | Stage | Gate before moving on |
 |---|---|---|
-| 0 | **Direction** — one page: the 母题, the devices derived from it, and an explicit *this episode will not* list | The motif is derived from this deck's content, not borrowed from the last episode |
+| 0 | **Direction** — one page: the narrative shape, the 母题, the devices derived from it, and an explicit *this episode will not* list | The motif is derived from this deck's content, not borrowed from the last episode; a series episode differs from its predecessor on ≥3 direction axes |
 | 1 | **Split** the copy deck into 8–14 segments; each is one idea | Each segment's text fits one screen's worth of type |
 | 2 | **Reference VO** — synthesize per segment, `ffprobe` real durations | Measured total vs deck estimate reported to the user |
 | 3 | **Timeline** — write `timeline.json` (content + measured times); run the pre-flight validator | `validate_timeline.py` passes |
 | 4 | **Generate** the composition from the JSON; run the static audit | `audit_html.mjs` reports no missing ids and no timing hazards |
 | 5 | **User review** — hand over the generated 打点表 (timing sheet) and storyboard | User has corrected the copy and beat times |
 | 6 | **Snapshot QA** — one frame per segment, sampled late in the segment | Every frame inspected; layout errors fixed here |
-| 7 | **Render once**, foreground, then extract frames from the finished mp4 | Frame count and duration match the timeline |
+| 7 | **Render once**, foreground, then extract frames and boundary strips from the finished mp4 | Frame count and duration match the timeline; every segment boundary seen in a cut strip |
 
 The single most expensive mistake in this format is re-rendering to check layout. A full render costs minutes; a snapshot costs seconds. Stages 4–6 exist so that stage 7 happens **once**.
 
@@ -80,10 +80,11 @@ Motion vocabulary, type scale, rhythm, and emphasis rules: [references/motion-an
 
 ## Audio
 
-Full procedure: [references/audio.md](references/audio.md). The two rules that matter most:
+Full procedure: [references/audio.md](references/audio.md). The three rules that matter most:
 
 - **Level by RMS against a target offset, never by peak normalization.** Peak-normalized music can measure louder than the voice. Target the bed ~20–25 dB below the voice's RMS, then listen.
 - **Duck the music only.** A sidechain keyed to the voice must not touch sound effects — compress the SFX and the click/whoosh accents disappear.
+- **Align every accent by its measured onset or peak.** Clicks align at the onset, whooshes at the peak and start *before* the picture; a cue dropped at the action's timestamp lands 30–80ms late and the whole film reads loose. `scripts/sfx_landmarks.py` prints the numbers, and the same measurement sets each cue's gain.
 
 ## Scripts
 
@@ -96,6 +97,7 @@ Full procedure: [references/audio.md](references/audio.md). The two rules that m
 | `scripts/audit_html.mjs` | Static audit of the generated composition: unresolved selectors, duplicate ids, stranded-fade hazards, `NaN` times, unitless CSS values, layout-property animation, idless or transformed `<video>` |
 | `scripts/contrast.py` | WCAG ratio for candidate text colors against the real composited background, with alpha blending and passing-variant suggestions |
 | `scripts/level_audio.py` | RMS-target the music bed, apply voice-keyed ducking and fades, and print the numbers it used |
+| `scripts/sfx_landmarks.py` | Measure each accent file's onset, peak time and peak level — the numbers that align a cue to its action and set its gain |
 | `scripts/probe_dom.mjs` | Drive the live composition: seek to given times, screenshot each, and dump computed style + geometry for named elements. Use it when a visual bug is real but the cause is not obvious. Blocks media by default (see non-negotiable 18); pass `--media` when the card pixels matter |
 
 Start a new episode from `assets/timeline.template.json` — it is the schema the validator enforces, and it passes clean. Copy it into the episode folder and edit from there.
@@ -106,7 +108,7 @@ Single-episode rules assume one film's worth of footage. A series adds three con
 
 - **Footage can belong to exactly one episode.** If only one script in the series says the product name out loud, only that episode may show the screen recording where the name is legible. The others look like they have the same footage and quietly break the naming convention the scripts depend on.
 - **Shared long recordings get a different range per episode.** A 60-second scroll through a gallery, used whole twice, is the same shot twice. Take a different interval and freeze on a different page each time.
-- **Divergent motifs are not decoration.** Adjacent episodes sharing a palette read as one long film; the motif rule under Layout constraints governs the choice, and the stage-0 "this episode will not" list is what keeps it honest once the deadline is near.
+- **Divergent motifs are not decoration.** Adjacent episodes sharing a palette read as one long film; the motif rule under Layout constraints governs the choice, and the stage-0 "this episode will not" list is what keeps it honest once the deadline is near. The master table's columns are the axes — differ in at least three of them between adjacent episodes, in kind and not just in appearance.
 - **Version the deliverables, and keep the two cuts apart.** `01 格式返工型-归位-v1-纯配乐版` and `…-参考口播版` is a naming scheme that survives being passed around in a chat message three weeks later. The number in the name is what lets the next episode say "same direction, v2" instead of "the one we changed".
 
 ## Where to put the project
