@@ -1,0 +1,105 @@
+# ---------------------------------------------------------------------------
+# Python  /  macOS  /  Editors  /  Node  /  Secrets  /  Generated output
+#
+# Everything that ships with the skill (SKILL.md, references/, scripts/,
+# assets/, agents/) is tracked. Everything below is produced by *running* the
+# skill and should never be committed.
+# ---------------------------------------------------------------------------
+
+# --- OS noise (macOS) ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+desktop.ini
+
+# --- Editors / IDEs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+
+# --- Agent scratch dirs (these live one level up, but can appear in-tree) ---
+.claude/
+.playwright-mcp/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+env/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# --- Node ---
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Lockfiles are deliberately NOT ignored: a render must stay reproducible.
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- HyperFrames project artifacts (if a test episode is scaffolded in-tree) ---
+.hyperframes/
+.hyperframesignore.bak
+storyboard.html
+*.hyperframes.json
+
+# --- Generated media & QA output: renders, frame dumps, probe screenshots ---
+renders/
+render/
+out/
+output/
+dist-episode/
+qa/
+qa-frames/
+probe/
+frames/
+*.mp4
+*.mov
+*.webm
+*.m4v
+*.wav
+*.mp3
+*.m4a
+*.aiff
+*.aif
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.psd
+*.log
+
+# Generated episode scaffolding — keep the template in assets/, not the output.
+timeline.json
+打点表.md
+index.html
+
+# --- Not ignored on purpose ---
+# assets/timeline.template.json  ← the starter schema, tracked
+# scripts/*.py, scripts/*.mjs     ← the tooling, tracked

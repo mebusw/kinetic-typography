@@ -1,0 +1,4 @@
+interface:
+  display_name: "Kinetic Typography"
+  short_description: "Vertical kinetic-typography shorts timed to a real voiceover"
+  default_prompt: "Build a vertical kinetic-typography video from this copy deck. Measure a reference voiceover first, then lay out the timeline, generate the composition, QA it with snapshots, and render once."

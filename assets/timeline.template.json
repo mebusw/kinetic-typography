@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "title": "EPISODE TITLE",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safe": { "top": 120, "bottom": 300, "left": 80, "right": 80 },
+    "facecam": { "slot": "bottom-right", "side": 270, "margin": 80 }
+  },
+  "total": 20.0,
+  "segments": [
+    {
+      "id": "seg-01",
+      "t0": 0.0,
+      "t1": 9.4,
+      "beat": "THE CLAIM OF THIS SEGMENT, IN ONE LINE",
+      "vo": "The voiceover text for this segment — the words that will be recorded.",
+      "beats": [
+        { "id": "s01-line1", "t": 1.2, "dur": 2.0, "text": "First line goes on screen", "role": "headline" },
+        { "id": "s01-line2", "t": 3.4, "dur": 2.6, "text": "Support line", "role": "body" }
+      ],
+      "cards": [
+        { "id": "s01-card1", "t": 2.0, "dur": 6.0, "x": 80, "y": 700, "w": 920, "h": 620, "src": "assets/clip.mp4" }
+      ]
+    },
+    {
+      "id": "seg-02",
+      "t0": 9.75,
+      "t1": 20.0,
+      "beat": "SECOND CLAIM",
+      "vo": "Second segment voiceover.",
+      "beats": [
+        { "id": "s02-line1", "t": 11.0, "dur": 2.4, "text": "Second segment headline", "role": "headline" }
+      ]
+    }
+  ]
+}
