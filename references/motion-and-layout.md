@@ -1,6 +1,6 @@
 # Motion and layout for vertical kinetic typography
 
-Contents: [Frame and safe zone](#frame-and-safe-zone) · [Type](#type) · [The face-cam slot](#the-face-cam-slot) · [Motion vocabulary](#motion-vocabulary) · [Rhythm](#rhythm) · [Transitions](#transitions) · [Emphasis](#emphasis-what-to-actually-animate) · [Making claims visible](#making-abstract-claims-visible) · [Footage](#footage) · [A persistent element can do the viewer's thinking](#a-persistent-element-can-do-the-viewers-thinking)
+Contents: [Frame and safe zone](#frame-and-safe-zone) · [Type](#type) · [The face-cam slot](#the-face-cam-slot) · [The subtitle is a caption](#the-subtitle-is-a-caption-not-a-subject) · [Motion vocabulary](#motion-vocabulary) · [Rhythm](#rhythm) · [Transitions](#transitions) · [Emphasis](#emphasis-what-to-actually-animate) · [Making claims visible](#making-abstract-claims-visible) · [A case story with no screen recording](#a-case-story-with-no-screen-recording) · [Footage](#footage) · [A persistent element can do the viewer's thinking](#a-persistent-element-can-do-the-viewers-thinking)
 
 ## Frame and type
 
@@ -22,9 +22,10 @@ Contents: [Frame and safe zone](#frame-and-safe-zone) · [Type](#type) · [The f
 |---|---|---|---|
 | Segment hook | 84–120px | 700–800 | The one line that has to stop the scroll |
 | Claim / headline | 56–72px | 600–700 | The argument of this segment |
-| Body | 34–44px | 400–500 | Never below 28px |
+| Body | 34–44px | 400–500 | Never below 28px — this floor is for *content* text; the spoken subtitle is a different role and sits at its own floor, see [the subtitle](#the-subtitle-is-a-caption-not-a-subject) |
 | Beat number | 96–140px | 800 | Numerals read as KPI — see the caveat below |
-| Label / caption | 28–32px | 500 | Must clear 4.5:1 contrast |
+| Label / in-figure note | 28–32px | 500 | Must clear 4.5:1 contrast |
+| **Spoken subtitle** | **28–30px** | 500–600 | Film caption — the smallest legible type in the frame, and deliberately so. No card, no box |
 
 **Font.** Declare with `@font-face` and `src: local(...)` so the render machine resolves the same face the design machine shows. Noto Sans SC / Source Han Sans for Chinese; a clean grotesque for Latin and numerals. Pair one display face with one text face, and set numerals with `font-variant-numeric: tabular-nums` so figures do not jitter between beats.
 
@@ -39,6 +40,36 @@ Many of these videos are recorded later, by the person, as a square or landscape
 - Rounded corners, a subtle border or shadow so it reads as a layer above the text.
 - **No footage yet? Leave the slot empty.** Do not shrink the type to fill it, do not center the composition to avoid it, do not insert a placeholder image. The composition is built around the slot from the first frame so that dropping the recording in later is a paste, not a re-layout.
 - If the user has footage, match its aspect before sizing it, and re-check the frames — a slot that was designed empty often turns out to overlap a headline that was previously free to be large.
+
+## The subtitle is a caption, not a subject
+
+The subtitle is the spoken line. It has to *read* as the spoken line, which means it has to
+look like a caption and not like a title, a card, or a piece of the design.
+
+**The grammar.**
+
+- **28–30px at 1080 wide** — the smallest legible type in the frame, deliberately. A caption
+  that competes with the headline is the wrong caption; if the caption is the largest type on
+  screen the episode is subtitled rather than illustrated.
+- **Bottom-left**, on the side opposite the face slot, in its own band (the slot's geometry
+  rule still applies — the two x-ranges must not intersect).
+- **No card, no filled box.** The film grammar has no box behind a caption. A filled plate
+  turns a caption into a UI element and pulls the eye straight to it.
+- **Coloured by the frame it sits on**: dark ink with a light halo on a light frame, white
+  with a soft dark halo on a dark one. The halo is what keeps a caption readable over a busy
+  image without a box. It is the same grammar inverted, not a different design.
+- **One card per spoken sentence**, ≤ ~21 CJK characters, broken at clause boundaries and
+  never mid-phrase. A card that runs past its sentence is a card that has to be cut somewhere
+  worse.
+
+**The test is a thumbnail.** Look at a contact-sheet cell the size of a feed thumbnail: the
+caption must not be the first thing the eye lands on. If it is, the type is too big, the
+frame behind it is too busy, or the segment has no picture at all — and the fix is the last
+two, never the first.
+
+**When the caption will not clear 4.5:1** at 28–30px, the frame behind it is too busy. Move
+the content up or darken the band behind the caption. Inflating the caption to fix a
+contrast failure converts the whole film into a subtitled video.
 
 ## Motion vocabulary
 
@@ -120,6 +151,39 @@ A sentence like "viewers understand relationships, you gave them a list" has no 
 The audience verifies the claim with their own eyes instead of taking your word for it. That is the difference between a video that restates its script and one that argues.
 
 Test each abstract line: *what would a camera pointed at this sentence film?* If the answer is nothing, build the diagram. Prefer self-drawn SVG over stock footage here — the argument is usually a transition, and a camera can only hold one state of it.
+
+### A case story with no screen recording
+
+A case-story episode — one client's situation, told in the first person, with no product
+screen to cut to — has exactly one place the argument can live: **the middle of the frame**.
+This is not a stylistic preference. With no screen recording, the centre of the frame is the
+only surface the viewer can look at while the story is being told, and a frame carrying only a
+headline, a bullet list and a face-cam is a slideshow of sentences: the viewer is *told* a
+relationship and never *sees* it.
+
+**One drawn centre per beat.** The episode's beat list is the drawing brief. Every beat gets
+a centre that renders *that* beat's claim, and the centre changes when the claim changes — so
+the set of centres traces the argument's beats instead of decorating them. Write the centre
+device down per beat in the direction page, the same way you write the persistent spine's
+states down as data.
+
+**The menu of centre grammars**, chosen by what the beat is doing rather than by taste:
+
+| the beat is… | the centre is… |
+|---|---|
+| comparing two things | a side-by-side, a balance, a split frame |
+| showing a sequence or a handoff | a flow, a rail, a cut-up process bar |
+| showing who relates to whom | a relationship diagram, nodes and connectors |
+| showing a quantity moving | a scale, a slope, a bar pair |
+| carrying a feeling | a sketch-comic panel |
+
+**A centre that restates its own caption is a decoration.** "The caption says 贴发票 and the
+picture is a stack of invoices" adds nothing the sentence did not already carry; the centre
+has to show the *relationship* the sentence only asserts. Test each one: *what would a camera
+pointed at this sentence film?* If the answer is nothing, build the diagram.
+
+**A case story without a centre per beat is not illustrated, it is recited.** That is the
+failure this rule exists to prevent.
 
 ## A persistent element can do the viewer's thinking
 

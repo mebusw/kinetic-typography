@@ -23,7 +23,39 @@ that is right at 8s can be off at 90s.
 
 **The bottom of the crop is what makes it read as "a person" rather than "a floating
 face".** Stop above the chest: head plus a collar and the top of the shoulders is enough.
-Anything lower turns into a webcam screenshot in a circle.
+Anything lower turns into a webcam screenshot in a circle. The three things the crop has to
+get right are spelled out below — none of them is measured by a checker.
+
+### The mask is a circle first, and the head is centred inside it
+
+Three failures, in the order they usually show up:
+
+**1. The mask is an ellipse.** `border-radius:50%` is a *percentage of the box's own sides* — on a
+box that is not square it resolves to two different radii and you get an oval, not a circle. The
+oval is subtle enough to read as "a soft mask" until a reviewer says the avatar looks squashed,
+and no overlap checker will ever mention it. So: the source crop is **1:1**, the wrapper's
+`width` equals its `height`, and the ring around it (`box-shadow`) follows the same radius — a
+rounded-rect ring wrapped around a circular video is the single clearest tell that the mask was
+never designed as a circle in the first place.
+
+**2. The head is in the circle but not centred in it.** A 16:9 take puts the speaker off to one
+side, so cropping the frame's centre gives a circle with the head pushed to one edge and dead
+air on the other. The crop's `x` and `y` come from the **head's own bounding box**, measured on a
+sampled frame — and "sampled" means several frames along the take, because speakers shift and a
+crop that is right at 8s can be off at 90s. Centre the head in the circle on **both** axes, and
+leave the head's eye-line a little above the circle's centre so there is a little more room below
+than above; dead-centre reads as a passport photo.
+
+**3. The bottom edge is wrong.** The crop's bottom has to land **below the collar and at or above
+the shoulder** — the collar line and the shoulder seam both inside the circle. Cut above the
+collar and the avatar is a floating head; cut below the chest and it is a webcam screenshot in a
+circle. The collar is what makes it read as a person at work, and it costs about 15% of the crop's
+height to keep.
+
+**The check is a still, not a probe.** Crop one frame, put the CSS circle on it, and look at three
+things: is the mask round, is the head centred, can you see the collar and the top of the shoulder.
+Every one of these lives outside the geometry a script can read — `border-radius` is not
+`getBoundingClientRect`, and a head's position inside a circle is not a box.
 
 ---
 
@@ -253,5 +285,15 @@ const FACE = face || { l: 732, t: 1552, r: 1028, bo: 1844 };  // 兜底，不是
 - **进度条要避开头像槽**：宽度按 `CW − 330` 收，否则一条线从头像中间穿过去。
 - **头像和主口播必须来自同一条时间表**。头像单独剪一次，唇动就会和声音差半拍——
   这是观众一眼能看出"不对劲"、但没人说得清哪里不对的错误。
+- **头像三条硬要求**（真人露脸版返工时用户逐条点出来的）：
+  ① **蒙版先是圆**——`border-radius:50%` 落在非正方形的盒子上会渲染成**椭圆**；
+  所以裁剪必须 1:1、外框 `width` 必须等于 `height`、描边环也要跟着同一个半径。
+  ② **头要居中**——不是"在圆里"，是"在圆的中心"。裁剪的 x/y 要从**头部自己的包围盒**
+  算出来（16:9 实录里人通常偏一侧，按画面中心裁会得到一个把人挤到边上的圆）；
+  眼睛略高于圆心，下方比上方多一点空间，正中是证件照。
+  ③ **露出领口到肩膀**——裁剪底边落在**领口线以下、肩膀线以上**，领子和肩膀接缝都要在圆里。
+  切高了是浮空的头，切低了是圆形里的视频会议截图。领口是"这是个在干活的人"的关键，成本约 15% 画高。
+  这三条**没有任何检查器能量到**（`border-radius` 不进 `getBoundingClientRect`，
+  头在圆里的位置也不是一个盒子），所以只能裁一张静帧、把 CSS 圆打上去、然后用眼睛看。
 - **检查器读 opacity 的是元素自己**。`<div class="at"><div class="shell">` 这种包一层，
   `check_occlusion.mjs` 会把每一张卡都当成常驻可见。把 `.at` 和 `.shell` 放在同一个元素上。
